@@ -554,8 +554,7 @@ function finishPlusOne(idx,opt){
   spinsLeft++;
   revealedIndex=-1; revealAlpha=1;
   updateStatus(); draw();
-  toast('🎁 抽到「'+opt.label+'」，次数+1，继续抽！');
-  setTimeout(()=>{ if(!spinning) spin(); },1700);
+  toast('🎁 抽到「'+opt.label+'」，次数+1，再点「开始」继续！');
 }
 function finishNormal(idx,opt){
   revealedIndex=idx; revealAlpha=0;
