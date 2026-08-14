@@ -113,6 +113,9 @@ body.admin .panel{display:block}
 #welcomeOverlay .big{font-size:56px}
 #welcomeOverlay h2{font-size:28px;color:#7c3aed;letter-spacing:2px}
 #welcomeOverlay .pass-btns{margin-top:16px}
+#redeemOverlay{z-index:25}
+.redeem-prize{font-size:26px;font-weight:800;color:#7c3aed;margin:14px 0 4px;word-break:break-all}
+.redeem-note{font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:8px}
 .code-box{background:rgba(0,0,0,.25);border:1px dashed rgba(255,255,255,.4);border-radius:12px;padding:10px;margin-bottom:10px;text-align:center}
 .code-box .code-label{font-size:12px;opacity:.75}
 .code-box .code-num{font-size:26px;font-weight:800;letter-spacing:4px;color:#fff;margin:4px 0}
@@ -167,8 +170,18 @@ body.admin .panel{display:block}
     <div class="big">🎉</div>
     <h2>恭喜抽中</h2>
     <div class="result" id="resultText"></div>
-    <button id="okBtn">太棒了</button>
+    <button id="okBtn">📸 进入兑换页面</button>
     <div class="redeem" id="redeemNote"></div>
+  </div>
+</div>
+
+<div class="overlay" id="redeemOverlay">
+  <div class="modal small">
+    <div class="big">🎫</div>
+    <h2>兑换单</h2>
+    <div class="redeem-prize" id="redeemPrize"></div>
+    <div class="redeem-note">请先截图保存本页，然后向 cj 出示兑换奖品</div>
+    <div class="pass-btns"><button id="redeemDone">我已截图，兑换完成</button></div>
   </div>
 </div>
 
@@ -271,6 +284,9 @@ const overlay=document.getElementById('overlay');
 const resultText=document.getElementById('resultText');
 const redeemNote=document.getElementById('redeemNote');
 const okBtn=document.getElementById('okBtn');
+const redeemOverlay=document.getElementById('redeemOverlay');
+const redeemPrize=document.getElementById('redeemPrize');
+const redeemDone=document.getElementById('redeemDone');
 const passOverlay=document.getElementById('passOverlay');
 const passInput=document.getElementById('passInput');
 const passCancel=document.getElementById('passCancel');
@@ -478,6 +494,51 @@ function applause(){
     master.gain.exponentialRampToValueAtTime(0.001,now+1.9);
   }catch(e){}
 }
+function cheer(){
+  if(!actx) return;
+  try{
+    const now=actx.currentTime;
+    const master=actx.createGain();
+    master.gain.value=1;
+    master.connect(actx.destination);
+    const dur=1.8;
+    const len=Math.floor(actx.sampleRate*dur);
+    const buf=actx.createBuffer(1,len,actx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(0.3+0.7*(i/len));
+    const src=actx.createBufferSource();
+    src.buffer=buf;
+    const f=actx.createBiquadFilter();
+    f.type='bandpass';
+    f.frequency.setValueAtTime(250,now);
+    f.frequency.exponentialRampToValueAtTime(900,now+0.5);
+    f.frequency.exponentialRampToValueAtTime(1300,now+1.4);
+    f.Q.value=0.6;
+    const g=actx.createGain();
+    g.gain.setValueAtTime(0.0001,now);
+    g.gain.exponentialRampToValueAtTime(0.5,now+0.4);
+    g.gain.setValueAtTime(0.5,now+1.0);
+    g.gain.exponentialRampToValueAtTime(0.001,now+dur);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(now); src.stop(now+dur);
+    for(let i=0;i<5;i++){
+      const t=now+0.15+Math.random()*1.0;
+      const o=actx.createOscillator();
+      o.type='sine';
+      const base=500+Math.random()*300;
+      o.frequency.setValueAtTime(base,t);
+      o.frequency.exponentialRampToValueAtTime(base*2.2,t+0.35);
+      const og=actx.createGain();
+      og.gain.setValueAtTime(0.0001,t);
+      og.gain.exponentialRampToValueAtTime(0.12,t+0.05);
+      og.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+      o.connect(og); og.connect(master);
+      o.start(t); o.stop(t+0.55);
+    }
+    master.gain.setValueAtTime(1,now);
+    master.gain.exponentialRampToValueAtTime(0.001,now+dur+0.2);
+  }catch(e){}
+}
 
 // ---- spin ----
 function randUpTo(n){
@@ -561,11 +622,13 @@ function finishNormal(idx,opt){
   revealedIndex=idx; revealAlpha=0;
   revealFade();
   resultText.textContent=opt.label;
+  redeemPrize.textContent=opt.label;
   redeemNote.textContent='请凭借截图向cj兑换奖品';
   winSound();
   confetti();
   setTimeout(()=>{
     overlay.classList.add('show');
+    cheer();
     applause();
   },650);
 }
@@ -746,6 +809,10 @@ resetBtn.addEventListener('click',()=>{ baseOptions=[...DEFAULTS]; afterEdit(); 
 // ---- result modal ----
 okBtn.addEventListener('click',()=>{
   overlay.classList.remove('show');
+  redeemOverlay.classList.add('show');
+});
+redeemDone.addEventListener('click',()=>{
+  redeemOverlay.classList.remove('show');
   finishRound();
 });
 
