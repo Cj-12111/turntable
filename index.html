@@ -62,8 +62,8 @@ body.admin .panel{display:block}
 .add-row button{border:none;border-radius:12px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer;
   background:linear-gradient(#a78bfa,#7c3aed);color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.25)}
 .add-row button:active{filter:brightness(.9)}
-.tools{display:flex;gap:8px;margin-top:10px}
-.tools button{flex:1;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.tools button{flex:1 1 30%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;
   border-radius:12px;padding:9px;font-size:13px;cursor:pointer}
 .tools button:active{background:rgba(255,255,255,.16)}
 .overlay{position:fixed;inset:0;background:rgba(20,5,40,.72);backdrop-filter:blur(4px);
@@ -118,6 +118,7 @@ body.admin .panel{display:block}
     <button id="addBtn">添加</button>
   </div>
   <div class="tools">
+    <button id="newGameBtn">开始新一局</button>
     <button id="resetBtn">恢复默认</button>
     <button id="passBtn">改密码</button>
     <button id="lockBtn">锁定 🔒</button>
@@ -164,7 +165,7 @@ let baseOptions=[];
 let gameOptions=[];
 let spinsLeft=1, spinCount=0;
 let revealedIndex=-1, revealAlpha=1;
-let roundActive=false;
+let roundActive=false, roundDone=false, revealAll=false;
 let spinning=false;
 let rotation=0;
 let adminUnlocked=false;
@@ -186,6 +187,7 @@ const addBtn=document.getElementById('addBtn');
 const resetBtn=document.getElementById('resetBtn');
 const passBtn=document.getElementById('passBtn');
 const lockBtn=document.getElementById('lockBtn');
+const newGameBtn=document.getElementById('newGameBtn');
 const overlay=document.getElementById('overlay');
 const resultText=document.getElementById('resultText');
 const redeemNote=document.getElementById('redeemNote');
@@ -222,22 +224,23 @@ function save(){ try{ localStorage.setItem('turntableOptions',JSON.stringify(bas
 function startRound(){
   gameOptions=[...baseOptions];
   spinsLeft=1; spinCount=0; revealedIndex=-1; revealAlpha=1;
-  roundActive=true;
+  roundActive=true; roundDone=false; revealAll=false;
   updateStatus(); draw();
 }
-function endRound(){
-  roundActive=false;
-  gameOptions=[...baseOptions];
-  spinsLeft=1; spinCount=0; revealedIndex=-1; revealAlpha=1;
-  updateStatus(); draw();
+function finishRound(){
+  roundDone=true; revealAll=true; roundActive=false;
+  spinsLeft=0; revealedIndex=-1; revealAlpha=0;
+  updateStatus(); revealFade();
 }
 function updateStatus(){
+  if(roundDone){ statusEl.textContent='次数: 0 · 本局结束'; return; }
   if(!roundActive){ statusEl.textContent=''; return; }
+  if(spinCount===0){ statusEl.textContent='剩余次数: '+spinsLeft; return; }
   statusEl.textContent='第 '+spinCount+' 次 · 剩余 '+spinsLeft+' 次';
 }
 function afterEdit(){
   save(); render();
-  if(!spinning) endRound();
+  if(!spinning) startRound();
 }
 
 // ---- canvas ----
@@ -271,7 +274,7 @@ function draw(){
     ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,start,end); ctx.closePath();
     ctx.fillStyle=COLORS[i%COLORS.length]; ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1.6; ctx.stroke();
-    if(revealedIndex===i){
+    if(revealAll || revealedIndex===i){
       ctx.save();
       ctx.globalAlpha=revealAlpha;
       ctx.rotate(start+seg/2);
@@ -333,6 +336,11 @@ function pointerIndexAt(r){
 }
 function spin(){
   if(spinning || gameOptions.length<1) return;
+  if(roundDone){
+    toast('次数已用完，本局结束');
+    updateStatus();
+    return;
+  }
   if(!roundActive) startRound();
   if(gameOptions.length===1){ resolveLanding(0,true); return; }
   spinning=true;
@@ -457,6 +465,7 @@ function setAdmin(on){
   if(on) render();
 }
 lockBtn.addEventListener('click',()=>setAdmin(false));
+newGameBtn.addEventListener('click',()=>{ if(!spinning) startRound(); });
 passBtn.addEventListener('click',async ()=>{
   const np=prompt('输入新的解锁密码（至少4位）:');
   if(np===null) return;
@@ -504,7 +513,7 @@ resetBtn.addEventListener('click',()=>{ baseOptions=[...DEFAULTS]; afterEdit(); 
 // ---- result modal ----
 okBtn.addEventListener('click',()=>{
   overlay.classList.remove('show');
-  endRound();
+  finishRound();
 });
 
 // ---- confetti ----
@@ -526,9 +535,9 @@ spinBtn.addEventListener('click',()=>{ ensureAudio(); spin(); });
 
 // ---- init ----
 baseOptions=load();
-gameOptions=[...baseOptions];
 resize();
 render();
+startRound();
 </script>
 </body>
 </html>
