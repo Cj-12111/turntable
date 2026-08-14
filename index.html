@@ -113,9 +113,19 @@ body.admin .panel{display:block}
 #welcomeOverlay .big{font-size:56px}
 #welcomeOverlay h2{font-size:28px;color:#7c3aed;letter-spacing:2px}
 #welcomeOverlay .pass-btns{margin-top:16px}
-#redeemOverlay{z-index:25}
-.redeem-prize{font-size:26px;font-weight:800;color:#7c3aed;margin:14px 0 4px;word-break:break-all}
-.redeem-note{font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:8px}
+#redeemOverlay{background:#fff;backdrop-filter:none;padding:0;align-items:stretch;justify-content:flex-start;z-index:25}
+#redeemOverlay .redeem-page{padding:calc(30px + env(safe-area-inset-top)) 22px calc(30px + env(safe-area-inset-bottom));text-align:center;color:#3b0764;overflow-y:auto;width:100%}
+.redeem-page h2{font-size:24px;margin:4px 0 0}
+.redeem-page .big{font-size:52px;margin-bottom:6px}
+.redeem-page .redeem-note{font-size:14px;color:#6b7280;line-height:1.7;margin:14px 0 10px}
+.redeem-page button{border:none;background:linear-gradient(#a78bfa,#7c3aed);color:#fff;font-size:16px;font-weight:700;padding:14px 44px;border-radius:30px;cursor:pointer;box-shadow:0 6px 16px rgba(124,58,237,.4)}
+.won-list{margin:16px auto;max-width:340px;text-align:left}
+.won-item{display:flex;align-items:center;gap:10px;padding:11px 13px;background:#f3f0ff;border-radius:12px;margin-bottom:8px;font-size:15px}
+.won-item .name{flex:1;word-break:break-all}
+.won-item .tag,.reveal-all .tag{font-size:11px;padding:3px 9px;border-radius:10px;flex:none;font-weight:700;color:#fff}
+.won-item .tag.plus,.reveal-all .tag.plus{background:#f59e0b}
+.won-item .tag.final,.reveal-all .tag.final{background:#22c55e}
+.reveal-all .tools-btn{width:100%;border:none;background:linear-gradient(#a78bfa,#7c3aed);color:#fff;font-size:15px;font-weight:700;padding:13px;border-radius:14px;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,.35);margin-top:14px}
 .code-box{background:rgba(0,0,0,.25);border:1px dashed rgba(255,255,255,.4);border-radius:12px;padding:10px;margin-bottom:10px;text-align:center}
 .code-box .code-label{font-size:12px;opacity:.75}
 .code-box .code-num{font-size:26px;font-weight:800;letter-spacing:4px;color:#fff;margin:4px 0}
@@ -170,18 +180,18 @@ body.admin .panel{display:block}
     <div class="big">🎉</div>
     <h2>恭喜抽中</h2>
     <div class="result" id="resultText"></div>
-    <button id="okBtn">📸 进入兑换页面</button>
+    <button id="okBtn">完成</button>
     <div class="redeem" id="redeemNote"></div>
   </div>
 </div>
 
 <div class="overlay" id="redeemOverlay">
-  <div class="modal small">
+  <div class="redeem-page">
     <div class="big">🎫</div>
     <h2>兑换单</h2>
-    <div class="redeem-prize" id="redeemPrize"></div>
+    <div class="won-list" id="wonListEl"></div>
     <div class="redeem-note">请先截图保存本页，然后向 cj 出示兑换奖品</div>
-    <div class="pass-btns"><button id="redeemDone">我已截图，兑换完成</button></div>
+    <button id="redeemDone">我已截图，兑换完成</button>
   </div>
 </div>
 
@@ -254,6 +264,7 @@ let gameOptions=[];
 let spinsLeft=1, spinCount=0;
 let revealedIndex=-1, revealAlpha=1;
 let roundActive=false, roundDone=false, revealAll=false;
+let wonList=[];
 let spinning=false;
 let rotation=0;
 let adminUnlocked=false;
@@ -285,8 +296,8 @@ const resultText=document.getElementById('resultText');
 const redeemNote=document.getElementById('redeemNote');
 const okBtn=document.getElementById('okBtn');
 const redeemOverlay=document.getElementById('redeemOverlay');
-const redeemPrize=document.getElementById('redeemPrize');
 const redeemDone=document.getElementById('redeemDone');
+const wonListEl=document.getElementById('wonListEl');
 const passOverlay=document.getElementById('passOverlay');
 const passInput=document.getElementById('passInput');
 const passCancel=document.getElementById('passCancel');
@@ -350,6 +361,7 @@ function startRound(){
   gameOptions=[...baseOptions];
   spinsLeft=1; spinCount=0; revealedIndex=-1; revealAlpha=1;
   roundActive=true; roundDone=false; revealAll=false;
+  wonList=[];
   revealAllEl.classList.remove('show');
   updateStatus(); draw();
 }
@@ -360,7 +372,11 @@ function finishRound(){
   showRevealList();
 }
 function showRevealList(){
-  revealAllEl.innerHTML='<div class="title">🎉 全部奖品揭晓</div>';
+  revealAllEl.innerHTML='';
+  const title=document.createElement('div');
+  title.className='title';
+  title.textContent='🎉 全部奖品揭晓';
+  revealAllEl.appendChild(title);
   gameOptions.forEach((o,i)=>{
     const item=document.createElement('div');
     item.className='item';
@@ -373,7 +389,50 @@ function showRevealList(){
     item.appendChild(dot); item.appendChild(name);
     revealAllEl.appendChild(item);
   });
+  if(wonList.length){
+    const wt=document.createElement('div');
+    wt.className='title';
+    wt.style.marginTop='12px';
+    wt.textContent='🏆 你抽到的奖品';
+    revealAllEl.appendChild(wt);
+    wonList.forEach(w=>{
+      const item=document.createElement('div');
+      item.className='item';
+      const dot=document.createElement('span');
+      dot.className='dot';
+      dot.style.background=w.plus?'#f59e0b':'#22c55e';
+      const name=document.createElement('span');
+      name.className='name';
+      name.textContent=w.label;
+      const tag=document.createElement('span');
+      tag.className='tag '+(w.plus?'plus':'final');
+      tag.textContent=w.plus?'次数+1':'中奖';
+      item.appendChild(dot); item.appendChild(name); item.appendChild(tag);
+      revealAllEl.appendChild(item);
+    });
+  }
+  const btn=document.createElement('button');
+  btn.className='tools-btn';
+  btn.textContent='🎫 进入兑换页';
+  btn.addEventListener('click',openRedeem);
+  revealAllEl.appendChild(btn);
   revealAllEl.classList.add('show');
+}
+function openRedeem(){
+  wonListEl.innerHTML='';
+  wonList.forEach(w=>{
+    const item=document.createElement('div');
+    item.className='won-item';
+    const name=document.createElement('span');
+    name.className='name';
+    name.textContent=w.label;
+    const tag=document.createElement('span');
+    tag.className='tag '+(w.plus?'plus':'final');
+    tag.textContent=w.plus?'次数+1':'中奖';
+    item.appendChild(name); item.appendChild(tag);
+    wonListEl.appendChild(item);
+  });
+  redeemOverlay.classList.add('show');
 }
 function updateStatus(){
   if(roundDone){ statusEl.textContent='次数: 0 · 本局结束'; return; }
@@ -612,6 +671,7 @@ function resolveLanding(idx, forcedNormal){
   }
 }
 function finishPlusOne(idx,opt){
+  wonList.push({label:opt.label, plus:true});
   gameOptions.splice(idx,1);
   spinsLeft++;
   revealedIndex=-1; revealAlpha=1;
@@ -622,7 +682,7 @@ function finishNormal(idx,opt){
   revealedIndex=idx; revealAlpha=0;
   revealFade();
   resultText.textContent=opt.label;
-  redeemPrize.textContent=opt.label;
+  wonList.push({label:opt.label, plus:false});
   redeemNote.textContent='请凭借截图向cj兑换奖品';
   winSound();
   confetti();
@@ -809,12 +869,9 @@ resetBtn.addEventListener('click',()=>{ baseOptions=[...DEFAULTS]; afterEdit(); 
 // ---- result modal ----
 okBtn.addEventListener('click',()=>{
   overlay.classList.remove('show');
-  redeemOverlay.classList.add('show');
-});
-redeemDone.addEventListener('click',()=>{
-  redeemOverlay.classList.remove('show');
   finishRound();
 });
+redeemDone.addEventListener('click',()=>redeemOverlay.classList.remove('show'));
 
 // ---- confetti ----
 const CONFETTI_COLORS=['#f43f5e','#f97316','#f59e0b','#10b981','#06b6d4','#8b5cf6','#d946ef'];
