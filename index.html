@@ -39,6 +39,13 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:1px;text-shadow:0 2px 8px rgba
 .spin-btn:active{transform:translate(-50%,-50%) scale(.94)}
 .spin-btn.disabled{opacity:.5}
 .status{font-size:13px;opacity:.85;margin:2px 0 10px;min-height:18px;text-align:center}
+.reveal-all{width:min(92vw,400px);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);
+  border-radius:16px;padding:12px 14px;margin:4px 0 10px;display:none}
+.reveal-all.show{display:block}
+.reveal-all .title{font-size:15px;font-weight:800;margin-bottom:8px;text-align:center}
+.reveal-all .item{display:flex;align-items:center;gap:10px;padding:5px 2px;font-size:14px}
+.reveal-all .item .dot{width:14px;height:14px;border-radius:50%;flex:none}
+.reveal-all .item .name{flex:1}
 .panel{width:min(94vw,420px);background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);
   border-radius:18px;padding:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   display:none}
@@ -113,6 +120,7 @@ body.admin .panel{display:block}
   <button class="spin-btn" id="spinBtn">开始</button>
 </div>
 <div class="status" id="status"></div>
+<div class="reveal-all" id="revealAll"></div>
 
 <div class="panel" id="panel">
   <div class="panel-head">
@@ -208,6 +216,7 @@ const titleEl=document.getElementById('title');
 const subEl=document.getElementById('sub');
 const spinBtn=document.getElementById('spinBtn');
 const statusEl=document.getElementById('status');
+const revealAllEl=document.getElementById('revealAll');
 const panel=document.getElementById('panel');
 const chipsEl=document.getElementById('chips');
 const countEl=document.getElementById('count');
@@ -276,12 +285,30 @@ function startRound(){
   gameOptions=[...baseOptions];
   spinsLeft=1; spinCount=0; revealedIndex=-1; revealAlpha=1;
   roundActive=true; roundDone=false; revealAll=false;
+  revealAllEl.classList.remove('show');
   updateStatus(); draw();
 }
 function finishRound(){
   roundDone=true; revealAll=true; roundActive=false;
-  spinsLeft=0; revealedIndex=-1; revealAlpha=0;
-  updateStatus(); revealFade();
+  spinsLeft=0; revealedIndex=-1; revealAlpha=1;
+  updateStatus(); draw();
+  showRevealList();
+}
+function showRevealList(){
+  revealAllEl.innerHTML='<div class="title">🎉 全部奖品揭晓</div>';
+  gameOptions.forEach((o,i)=>{
+    const item=document.createElement('div');
+    item.className='item';
+    const dot=document.createElement('span');
+    dot.className='dot';
+    dot.style.background=COLORS[i%COLORS.length];
+    const name=document.createElement('span');
+    name.className='name';
+    name.textContent=parseOption(o).label;
+    item.appendChild(dot); item.appendChild(name);
+    revealAllEl.appendChild(item);
+  });
+  revealAllEl.classList.add('show');
 }
 function updateStatus(){
   if(roundDone){ statusEl.textContent='次数: 0 · 本局结束'; return; }
@@ -325,26 +352,25 @@ function draw(){
     ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,start,end); ctx.closePath();
     ctx.fillStyle=COLORS[i%COLORS.length]; ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1.6; ctx.stroke();
-    if(revealAll || revealedIndex===i){
-      const mid=start+seg/2;
-      let a=(rotation+mid)%(2*Math.PI);
-      if(a<0) a+=2*Math.PI;
-      const flip=(a>Math.PI/2 && a<Math.PI*1.5);
-      ctx.save();
-      ctx.globalAlpha=revealAlpha;
-      ctx.rotate(mid+(flip?Math.PI:0));
-      ctx.textAlign='right'; ctx.textBaseline='middle';
-      ctx.font='700 '+fontSz(seg)+'px sans-serif';
-      ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=4;
-      ctx.fillText(shorten(parseOption(gameOptions[i]).label),R-13,0);
-      ctx.restore();
-    }
   }
   ctx.restore();
   ctx.beginPath(); ctx.arc(cx,cy,R-1,0,2*Math.PI);
   ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2; ctx.stroke();
   ctx.beginPath(); ctx.arc(cx,cy,R*0.23,0,2*Math.PI);
   ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=10; ctx.fill(); ctx.shadowBlur=0;
+  if(revealedIndex>=0 && !revealAll && revealedIndex<gameOptions.length){
+    const mid=-Math.PI/2+revealedIndex*seg+seg/2;
+    const ang=rotation+mid;
+    const px=cx+Math.cos(ang)*R*0.56;
+    const py=cy+Math.sin(ang)*R*0.56;
+    ctx.save();
+    ctx.globalAlpha=revealAlpha;
+    ctx.font='800 '+Math.max(13,Math.min(18,R*0.11))+'px sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=5;
+    ctx.fillText(shorten(parseOption(gameOptions[revealedIndex]).label),px,py);
+    ctx.restore();
+  }
 }
 
 // ---- audio ----
@@ -488,10 +514,12 @@ function finishNormal(idx,opt){
   revealFade();
   resultText.textContent=opt.label;
   redeemNote.textContent='请凭借截图向cj兑换奖品';
-  overlay.classList.add('show');
   winSound();
-  setTimeout(applause,400);
   confetti();
+  setTimeout(()=>{
+    overlay.classList.add('show');
+    applause();
+  },650);
 }
 function revealFade(){
   const t0=performance.now();
