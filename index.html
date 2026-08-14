@@ -96,7 +96,10 @@ body.admin .panel{display:block}
 #gateOverlay{z-index:30}
 #passOverlay{z-index:40}
 .gate-sub{font-size:13px;color:#6b7280;margin:6px 0 0}
-.gate-admin{display:inline-block;margin-top:14px;font-size:12px;color:#8b5cf6;text-decoration:underline;cursor:pointer;background:none;border:none;padding:0}
+.gate-admin{font-size:12px;color:#8b5cf6;text-decoration:underline;cursor:pointer;background:none;border:1px solid rgba(139,92,246,.5);border-radius:20px;padding:6px 14px}
+.gate-admin-row{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+#codeOverlay{z-index:45}
+.code-big{font-size:38px;font-weight:900;letter-spacing:6px;color:#7c3aed;margin:14px 0;text-align:center}
 .code-box{background:rgba(0,0,0,.25);border:1px dashed rgba(255,255,255,.4);border-radius:12px;padding:10px;margin-bottom:10px;text-align:center}
 .code-box .code-label{font-size:12px;opacity:.75}
 .code-box .code-num{font-size:26px;font-weight:800;letter-spacing:4px;color:#fff;margin:4px 0}
@@ -178,7 +181,22 @@ body.admin .panel{display:block}
       <button id="gateConfirm">进入</button>
     </div>
     <div class="pass-msg" id="gateMsg"></div>
-    <button class="gate-admin" id="gateAdmin">我是管理员</button>
+    <div class="gate-admin-row">
+      <button class="gate-admin" id="gateCode">查看/刷新抽奖码</button>
+      <button class="gate-admin" id="gateAdmin">我是管理员</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="codeOverlay">
+  <div class="modal small">
+    <h2>🎟️ 当前抽奖码</h2>
+    <div class="code-big" id="codeBig">------</div>
+    <div class="pass-btns">
+      <button id="codeRefresh">换新码</button>
+      <button id="codeDone">完成</button>
+    </div>
+    <div class="gate-sub">告诉玩家这个码；玩家进入一次后会自动换新码</div>
   </div>
 </div>
 
@@ -206,6 +224,7 @@ let rotation=0;
 let adminUnlocked=false;
 let locked=true;
 let accessCode='';
+let passIntent='';
 let unlockTaps=0, unlockTimer=null, toastTimer=null;
 
 const canvas=document.getElementById('wheel');
@@ -240,8 +259,13 @@ const gateInput=document.getElementById('gateInput');
 const gateConfirm=document.getElementById('gateConfirm');
 const gateMsg=document.getElementById('gateMsg');
 const gateAdmin=document.getElementById('gateAdmin');
+const gateCode=document.getElementById('gateCode');
 const codeNum=document.getElementById('codeNum');
 const codeBtn=document.getElementById('codeBtn');
+const codeOverlay=document.getElementById('codeOverlay');
+const codeBig=document.getElementById('codeBig');
+const codeRefresh=document.getElementById('codeRefresh');
+const codeDone=document.getElementById('codeDone');
 const toastEl=document.getElementById('toast');
 
 // ---- option parsing ----
@@ -272,7 +296,8 @@ function genCode(){
   return String(a[0]%1000000).padStart(6,'0');
 }
 function saveCode(){ try{ localStorage.setItem('turntableCode',accessCode); }catch(e){} }
-function updateCodeBox(){ codeNum.textContent=accessCode||'------'; }
+function updateCodeBox(){ codeNum.textContent=accessCode||'------'; codeBig.textContent=accessCode||'------'; }
+function showCodePopup(){ updateCodeBox(); codeOverlay.classList.add('show'); }
 function showGate(){
   locked=true;
   gateInput.value=''; gateMsg.textContent='';
@@ -574,14 +599,20 @@ passConfirm.addEventListener('click',async ()=>{
   if(await checkPass(p)){
     passOverlay.classList.remove('show');
     passMsg.textContent='';
-    setAdmin(true);
-    hideGate();
-    locked=false;
+    if(passIntent==='code'){
+      passIntent='';
+      showCodePopup();
+    }else{
+      passIntent='';
+      setAdmin(true);
+      hideGate();
+      locked=false;
+    }
   }else{
     passMsg.textContent='密码错误';
   }
 });
-passCancel.addEventListener('click',()=>passOverlay.classList.remove('show'));
+passCancel.addEventListener('click',()=>{ passOverlay.classList.remove('show'); passIntent=''; });
 passInput.addEventListener('keydown',e=>{ if(e.key==='Enter') passConfirm.click(); });
 function setAdmin(on){
   adminUnlocked=on;
@@ -607,10 +638,24 @@ codeBtn.addEventListener('click',()=>{
   toast('新抽奖码已生成');
 });
 gateAdmin.addEventListener('click',()=>{
+  passIntent='admin';
   passInput.value=''; passMsg.textContent='';
   passOverlay.classList.add('show');
   setTimeout(()=>passInput.focus(),80);
 });
+gateCode.addEventListener('click',()=>{
+  passIntent='code';
+  passInput.value=''; passMsg.textContent='';
+  passOverlay.classList.add('show');
+  setTimeout(()=>passInput.focus(),80);
+});
+codeRefresh.addEventListener('click',()=>{
+  accessCode=genCode();
+  saveCode();
+  updateCodeBox();
+  toast('新抽奖码已生成');
+});
+codeDone.addEventListener('click',()=>codeOverlay.classList.remove('show'));
 gateConfirm.addEventListener('click',()=>{
   const v=gateInput.value.trim();
   if(!v){ gateMsg.textContent='请输入抽奖码'; return; }
