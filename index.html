@@ -270,6 +270,7 @@ let rotation=0;
 let adminUnlocked=false;
 let locked=true;
 let accessCode='';
+let adminPassword='';
 let passIntent='';
 let unlockTaps=0, unlockTimer=null, toastTimer=null;
 
@@ -340,15 +341,49 @@ function load(){
 }
 function save(){ try{ localStorage.setItem('turntableOptions',JSON.stringify(baseOptions)); }catch(e){} }
 
-// ---- access code (入场抽奖码) ----
+// ---- access code (入场抽奖码，全网共享) ----
+const CODE_API='/code';
 function genCode(){
   const a=new Uint32Array(1);
   crypto.getRandomValues(a);
   return String(a[0]%1000000).padStart(6,'0');
 }
 function saveCode(){ try{ localStorage.setItem('turntableCode',accessCode); }catch(e){} }
+async function fetchCode(){
+  try{
+    const r=await fetch(CODE_API);
+    const j=await r.json();
+    return (j&&j.code)?j.code:null;
+  }catch(e){ return null; }
+}
+async function rotateCode(){
+  try{
+    const r=await fetch(CODE_API,{method:'POST'});
+    const j=await r.json();
+    return (j&&j.code)?j.code:null;
+  }catch(e){ return null; }
+}
+async function fetchPassword(){
+  try{
+    const r=await fetch(CODE_API+'/password');
+    const j=await r.json();
+    return (j&&j.password)?j.password:null;
+  }catch(e){ return null; }
+}
+async function setPassword(np){
+  try{
+    const r=await fetch(CODE_API+'/password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({password:np})});
+    const j=await r.json();
+    return !!(j&&j.password===np);
+  }catch(e){ return false; }
+}
 function updateCodeBox(){ codeNum.textContent=accessCode||'------'; codeBig.textContent=accessCode||'------'; }
-function showCodePopup(){ updateCodeBox(); codeOverlay.classList.add('show'); }
+async function showCodePopup(){
+  const c=await fetchCode();
+  if(c) accessCode=c;
+  updateCodeBox();
+  codeOverlay.classList.add('show');
+}
 function showGate(){
   locked=true;
   gateInput.value=''; gateMsg.textContent='';
@@ -711,23 +746,8 @@ function toast(msg){
   toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1500);
 }
 
-// ---- admin / password ----
-async function hashPass(s){
-  const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
-  return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-async function checkPass(p){
-  try{
-    const stored=localStorage.getItem('turntablePassHash');
-    if(stored){
-      if(stored.startsWith('plain:')) return p===stored.slice(6);
-      return (await hashPass(p))===stored;
-    }
-    return (await hashPass(p))===await hashPass(DEFAULT_PASS);
-  }catch(e){
-    return p===DEFAULT_PASS;
-  }
-}
+// ---- admin / password (全网共享，可改) ----
+function checkPass(p){ return p===adminPassword; }
 titleEl.addEventListener('click',()=>{
   unlockTaps++;
   clearTimeout(unlockTimer);
@@ -742,7 +762,9 @@ titleEl.addEventListener('click',()=>{
 passConfirm.addEventListener('click',async ()=>{
   const p=passInput.value.trim();
   if(!p){ passMsg.textContent='请输入密码'; return; }
-  if(await checkPass(p)){
+  const pw=await fetchPassword();
+  if(pw) adminPassword=pw;
+  if(checkPass(p)){
     passOverlay.classList.remove('show');
     passMsg.textContent='';
     if(passIntent==='code'){
@@ -769,16 +791,18 @@ lockBtn.addEventListener('click',()=>{
   setAdmin(false);
   showGate();
 });
-newGameBtn.addEventListener('click',()=>{
+newGameBtn.addEventListener('click',async ()=>{
   if(!spinning){
     startRound();
-    accessCode=genCode();
+    const nc=await rotateCode();
+    accessCode=nc||genCode();
     saveCode();
     updateCodeBox();
   }
 });
-codeBtn.addEventListener('click',()=>{
-  accessCode=genCode();
+codeBtn.addEventListener('click',async ()=>{
+  const nc=await rotateCode();
+  accessCode=nc||genCode();
   saveCode();
   updateCodeBox();
   toast('新抽奖码已生成');
@@ -795,48 +819,52 @@ gateCode.addEventListener('click',()=>{
   passOverlay.classList.add('show');
   setTimeout(()=>passInput.focus(),80);
 });
-codeRefresh.addEventListener('click',()=>{
-  accessCode=genCode();
+codeRefresh.addEventListener('click',async ()=>{
+  const nc=await rotateCode();
+  accessCode=nc||genCode();
   saveCode();
   updateCodeBox();
   toast('新抽奖码已生成');
 });
 codeDone.addEventListener('click',()=>codeOverlay.classList.remove('show'));
-welcomeOk.addEventListener('click',()=>welcomeOverlay.classList.remove('show'));
-gateConfirm.addEventListener('click',()=>{
-  const v=gateInput.value.trim();
-  if(!v){ gateMsg.textContent='请输入抽奖码'; return; }
-  if(v===accessCode){
-    gateMsg.textContent='';
-    gateInput.value='';
-    hideGate();
-    locked=false;
-    accessCode=genCode();
-    saveCode();
-    updateCodeBox();
-    startRound();
-    toast('✅ 已入场，抽奖码已更新');
-    welcomeOverlay.classList.add('show');
-  }else{
-    gateMsg.textContent='抽奖码错误';
-  }
-});
-gateInput.addEventListener('keydown',e=>{ if(e.key==='Enter') gateConfirm.click(); });
 passBtn.addEventListener('click',async ()=>{
-  const np=prompt('输入新的解锁密码（至少4位）:');
+  const np=prompt('输入新的管理员密码（至少4位，所有设备生效）:');
   if(np===null) return;
   const npv=np.trim();
   if(npv.length<4){ alert('密码至少需要4位'); return; }
   const np2=prompt('再输入一次确认:');
   if(np2===null) return;
   if(np2.trim()!==npv){ alert('两次输入不一致'); return; }
-  try{
-    localStorage.setItem('turntablePassHash',await hashPass(npv));
-  }catch(e){
-    localStorage.setItem('turntablePassHash','plain:'+npv);
+  if(await setPassword(npv)){
+    adminPassword=npv;
+    alert('✅ 密码已更新（所有设备生效）');
+  }else{
+    alert('❌ 更新失败，请检查网络后重试');
   }
-  alert('✅ 密码已修改');
 });
+welcomeOk.addEventListener('click',()=>welcomeOverlay.classList.remove('show'));
+gateConfirm.addEventListener('click',async ()=>{
+  const v=gateInput.value.trim();
+  if(!v){ gateMsg.textContent='请输入抽奖码'; return; }
+  const cur=await fetchCode();
+  if(cur) accessCode=cur;
+  if(v===accessCode){
+    gateMsg.textContent='';
+    gateInput.value='';
+    hideGate();
+    locked=false;
+    startRound();
+    toast('✅ 已入场');
+    welcomeOverlay.classList.add('show');
+    const nc=await rotateCode();
+    accessCode=nc||genCode();
+    saveCode();
+    updateCodeBox();
+  }else{
+    gateMsg.textContent='抽奖码错误';
+  }
+});
+gateInput.addEventListener('keydown',e=>{ if(e.key==='Enter') gateConfirm.click(); });
 
 // ---- edit options ----
 function render(){
@@ -891,13 +919,18 @@ function confetti(){
 spinBtn.addEventListener('click',()=>{ ensureAudio(); spin(); });
 
 // ---- init ----
-baseOptions=load();
-resize();
-render();
-startRound();
-accessCode=localStorage.getItem('turntableCode')||genCode();
-saveCode();
-showGate();
+(async function init(){
+  baseOptions=load();
+  resize();
+  render();
+  startRound();
+  const c=await fetchCode();
+  if(c) accessCode=c;
+  else accessCode=localStorage.getItem('turntableCode')||'';
+  const pw=await fetchPassword();
+  if(pw) adminPassword=pw;
+  showGate();
+})();
 </script>
 </body>
 </html>

@@ -1,0 +1,7 @@
+name = "cj-yg-wheels"
+compatibility_date = "2026-08-14"
+pages_build_output_dir = "static"
+
+[[kv_namespaces]]
+binding = "CODE_KV"
+id = "125f27e21a574ee1aaf77dc2fa028bde"
