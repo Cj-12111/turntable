@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#4c1d95">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎡</text></svg>">
+<title>🎡 幸运大转盘</title>
+<style>
+:root{--purple:#7c3aed}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  min-height:100svh;
+  background:radial-gradient(120% 90% at 50% -10%,#8b5cf6,#6d28d9 40%,#2e1065 100%);
+  background-attachment:fixed;
+  color:#fff;
+  display:flex;flex-direction:column;align-items:center;
+  padding:calc(14px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom));
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+h1{margin:6px 0 2px;font-size:22px;letter-spacing:1px;text-shadow:0 2px 8px rgba(0,0,0,.35)}
+.sub{font-size:13px;opacity:.75;margin-bottom:6px}
+.wheel-wrap{position:relative;width:min(82vw,300px);aspect-ratio:1/1;margin:12px auto 10px}
+#wheel{width:100%;height:100%;display:block;filter:drop-shadow(0 12px 24px rgba(0,0,0,.45))}
+.needle{position:absolute;top:-4%;left:50%;transform:translateX(-50%);z-index:5;
+  width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:24px solid #ef4444;
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))}
+.needle::after{content:'';position:absolute;top:-26px;left:-7px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:3px solid #fff}
+.spin-btn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;
+  width:27%;height:27%;border-radius:50%;border:none;cursor:pointer;
+  background:radial-gradient(circle at 35% 30%,#fff,#e5e7eb);
+  color:#6d28d9;font-size:clamp(15px,5vw,20px);font-weight:800;
+  box-shadow:0 8px 18px rgba(0,0,0,.4),inset 0 -3px 6px rgba(0,0,0,.12);
+  transition:transform .1s}
+.spin-btn:active{transform:translate(-50%,-50%) scale(.94)}
+.spin-btn.disabled{opacity:.5}
+.hint{font-size:12px;opacity:.75;margin:2px 0 10px;display:none}
+.panel{width:min(94vw,420px);background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);
+  border-radius:18px;padding:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panel-title{font-size:14px;font-weight:700}
+.count{font-size:12px;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:20px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;max-height:120px;overflow-y:auto;margin-bottom:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);
+  border-radius:20px;padding:6px 6px 6px 12px;font-size:13px;max-width:100%}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+.chip button{border:none;background:rgba(0,0,0,.25);color:#fff;width:18px;height:18px;border-radius:50%;
+  font-size:12px;line-height:1;cursor:pointer;flex:none}
+.chip button:active{background:rgba(0,0,0,.45)}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;min-width:0;border-radius:12px;border:1px solid rgba(255,255,255,.25);
+  background:rgba(0,0,0,.25);color:#fff;padding:10px 12px;font-size:14px;outline:none}
+.add-row input::placeholder{color:rgba(255,255,255,.45)}
+.add-row button{border:none;border-radius:12px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer;
+  background:linear-gradient(#a78bfa,#7c3aed);color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.25)}
+.add-row button:active{filter:brightness(.9)}
+.tools{display:flex;gap:8px;margin-top:10px}
+.tools button{flex:1;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;
+  border-radius:12px;padding:9px;font-size:13px;cursor:pointer}
+.tools button:active{background:rgba(255,255,255,.16)}
+.overlay{position:fixed;inset:0;background:rgba(20,5,40,.72);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;z-index:20;padding:24px}
+.overlay.show{display:flex}
+.modal{background:linear-gradient(#fff,#f3f0ff);color:#3b0764;border-radius:22px;padding:30px 26px;width:min(84vw,320px);
+  text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+.modal .big{font-size:44px;margin-bottom:8px}
+.modal h2{margin:0 0 4px;font-size:18px}
+.modal .result{font-size:22px;font-weight:800;color:#7c3aed;word-break:break-all;margin-bottom:18px}
+.modal button{border:none;background:linear-gradient(#a78bfa,#7c3aed);color:#fff;font-size:15px;font-weight:700;
+  padding:11px 34px;border-radius:30px;cursor:pointer;box-shadow:0 6px 16px rgba(124,58,237,.4)}
+.modal button:active{filter:brightness(.9)}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+.confetti{position:fixed;top:-14px;width:9px;height:14px;z-index:19;pointer-events:none;border-radius:2px}
+@keyframes fall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(720deg);opacity:.6}}
+</style>
+</head>
+<body>
+<h1>🎡 幸运大转盘</h1>
+<div class="sub">点中间的「开始」，看看今天抽到什么</div>
+
+<div class="wheel-wrap">
+  <canvas id="wheel"></canvas>
+  <div class="needle"></div>
+  <button class="spin-btn" id="spinBtn">开始</button>
+</div>
+<div class="hint" id="hint">至少需要 2 个选项</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <span class="panel-title">✏️ 抽奖选项</span>
+    <span class="count" id="count">8 项</span>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="add-row">
+    <input id="newOpt" type="text" maxlength="20" placeholder="输入新选项，回车添加…" autocomplete="off">
+    <button id="addBtn">添加</button>
+  </div>
+  <div class="tools">
+    <button id="resetBtn">恢复默认</button>
+    <button id="clearBtn">清空</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="big">🎉</div>
+    <h2>恭喜抽中</h2>
+    <div class="result" id="resultText"></div>
+    <button id="okBtn">太棒了</button>
+  </div>
+</div>
+
+<script>
+const COLORS=['#f43f5e','#f97316','#f59e0b','#10b981','#06b6d4','#3b82f6','#8b5cf6','#d946ef','#ef4444','#84cc16','#14b8a6','#6366f1','#ec4899','#facc15','#22c55e','#0ea5e9','#a855f7','#f87171','#34d399','#60a5fa'];
+const DEFAULTS=['咖啡一杯','免加班券','彩票一张','零食大礼包','谢谢参与','锦鲤附体','奶茶一杯','大扫除一次'];
+
+let options=[];
+let rotation=0;
+let spinning=false;
+
+const canvas=document.getElementById('wheel');
+const ctx=canvas.getContext('2d');
+let W=0,H=0,R=0;
+
+const spinBtn=document.getElementById('spinBtn');
+const chipsEl=document.getElementById('chips');
+const countEl=document.getElementById('count');
+const hint=document.getElementById('hint');
+const newOpt=document.getElementById('newOpt');
+const addBtn=document.getElementById('addBtn');
+const resetBtn=document.getElementById('resetBtn');
+const clearBtn=document.getElementById('clearBtn');
+const overlay=document.getElementById('overlay');
+const resultText=document.getElementById('resultText');
+const okBtn=document.getElementById('okBtn');
+
+function load(){
+  try{
+    const s=localStorage.getItem('turntableOptions');
+    if(s){
+      const a=JSON.parse(s);
+      if(Array.isArray(a)&&a.length>=2&&a.every(x=>typeof x==='string'&&x.trim().length>0))
+        return a.map(x=>x.trim());
+    }
+  }catch(e){}
+  return [...DEFAULTS];
+}
+function save(){ try{ localStorage.setItem('turntableOptions',JSON.stringify(options)); }catch(e){} }
+options=load();
+
+function resize(){
+  const rect=canvas.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,3);
+  W=rect.width; H=rect.height;
+  canvas.width=Math.max(1,W*dpr); canvas.height=Math.max(1,H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+window.addEventListener('resize',resize);
+window.addEventListener('orientationchange',()=>setTimeout(resize,150));
+
+function fontSz(seg){ return Math.max(11,Math.min(20,(seg*R)/2.6)); }
+function shorten(s){ return s.length>7 ? s.slice(0,7)+'…' : s; }
+
+function draw(){
+  const n=options.length;
+  R=Math.min(W,H)/2-2;
+  const cx=W/2, cy=H/2;
+  ctx.clearRect(0,0,W,H);
+  if(n===0 || R<4){ return; }
+  const seg=2*Math.PI/n;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rotation);
+  for(let i=0;i<n;i++){
+    const start=-Math.PI/2+i*seg;
+    const end=start+seg;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,start,end); ctx.closePath();
+    ctx.fillStyle=COLORS[i%COLORS.length]; ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1.6; ctx.stroke();
+    ctx.save();
+    ctx.rotate(start+seg/2);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.font='700 '+fontSz(seg)+'px sans-serif';
+    ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=3;
+    ctx.fillText(shorten(options[i]),R-13,0);
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(cx,cy,R-1,0,2*Math.PI);
+  ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,R*0.23,0,2*Math.PI);
+  ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=10; ctx.fill(); ctx.shadowBlur=0;
+}
+
+// ---- audio ----
+let actx=null;
+function ensureAudio(){
+  if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(actx && actx.state==='suspended'){ try{ actx.resume(); }catch(e){} }
+}
+function tick(){
+  if(!actx) return;
+  try{
+    const o=actx.createOscillator(), g=actx.createGain();
+    o.type='square'; o.frequency.value=1500; g.gain.value=0.05;
+    o.connect(g); g.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime+0.02);
+  }catch(e){}
+}
+function winSound(){
+  if(!actx) return;
+  try{
+    [523,659,784].forEach((f,i)=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type='sine'; o.frequency.value=f;
+      const t=actx.currentTime+i*0.12;
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.14,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t); o.stop(t+0.55);
+    });
+  }catch(e){}
+}
+
+// ---- spin ----
+function randomIndex(){
+  const a=new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return a[0]%options.length;
+}
+function pointerIndexAt(r){
+  const seg=2*Math.PI/options.length;
+  let a=(-r)%(2*Math.PI); if(a<0) a+=2*Math.PI;
+  return Math.floor(a/seg)%options.length;
+}
+function spin(){
+  if(spinning || options.length<2) return;
+  spinning=true;
+  const seg=2*Math.PI/options.length;
+  const idx=randomIndex();
+  const theta=-Math.PI/2+idx*seg+seg/2;
+  let final=-Math.PI/2-theta;
+  const minRot=rotation+5*2*Math.PI;
+  const k=Math.ceil((minRot-final)/(2*Math.PI));
+  final+=k*2*Math.PI;
+  animate(rotation,final,idx);
+}
+function animate(from,to,idx){
+  const dur=5000;
+  const t0=performance.now();
+  let last=pointerIndexAt(from);
+  function frame(now){
+    const t=Math.min(1,(now-t0)/dur);
+    const eased=1-Math.pow(1-t,4);
+    rotation=from+(to-from)*eased;
+    const cur=pointerIndexAt(rotation);
+    if(cur!==last){ last=cur; tick(); }
+    draw();
+    if(t<1){ requestAnimationFrame(frame); }
+    else{ spinning=false; finish(idx); }
+  }
+  requestAnimationFrame(frame);
+}
+function finish(idx){
+  resultText.textContent=options[idx];
+  overlay.classList.add('show');
+  winSound();
+  confetti();
+}
+
+// ---- UI ----
+function render(){
+  countEl.textContent=options.length+' 项';
+  chipsEl.innerHTML='';
+  options.forEach((o,i)=>{
+    const c=document.createElement('div'); c.className='chip';
+    const s=document.createElement('span'); s.textContent=o;
+    const b=document.createElement('button'); b.textContent='✕';
+    b.setAttribute('aria-label','删除 '+o);
+    b.addEventListener('click',()=>removeOpt(i));
+    c.appendChild(s); c.appendChild(b);
+    chipsEl.appendChild(c);
+  });
+  const can=options.length>=2;
+  spinBtn.classList.toggle('disabled',!can);
+  hint.style.display=can?'none':'block';
+  draw();
+}
+function removeOpt(i){ options.splice(i,1); save(); render(); }
+function addOpt(){
+  const v=newOpt.value.trim();
+  if(!v) return;
+  options.push(v);
+  newOpt.value=''; save(); render(); newOpt.focus();
+}
+
+spinBtn.addEventListener('click',()=>{ ensureAudio(); spin(); });
+addBtn.addEventListener('click',addOpt);
+newOpt.addEventListener('keydown',e=>{ if(e.key==='Enter') addOpt(); });
+resetBtn.addEventListener('click',()=>{ options=[...DEFAULTS]; save(); render(); });
+clearBtn.addEventListener('click',()=>{ options=[]; save(); render(); });
+okBtn.addEventListener('click',()=>overlay.classList.remove('show'));
+
+// ---- confetti ----
+const CONFETTI_COLORS=['#f43f5e','#f97316','#f59e0b','#10b981','#06b6d4','#8b5cf6','#d946ef'];
+function confetti(){
+  for(let i=0;i<45;i++){
+    const d=document.createElement('div');
+    d.className='confetti';
+    d.style.left=Math.random()*100+'vw';
+    d.style.background=CONFETTI_COLORS[i%CONFETTI_COLORS.length];
+    d.style.animation='fall '+(2.4+Math.random()*1.6)+'s linear '+(Math.random()*0.6)+'s forwards';
+    d.style.transform='rotate('+Math.random()*360+'deg)';
+    document.body.appendChild(d);
+    setTimeout(()=>d.remove(),4600);
+  }
+}
+
+resize();
+render();
+</script>
+</body>
+</html>
