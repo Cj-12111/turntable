@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#4c1d95">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎡</text></svg>">
-<title>🎡 幸运大转盘</title>
+<title>🎡 cj的转盘</title>
 <style>
 :root{--purple:#7c3aed}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -108,6 +108,10 @@ body.admin .panel{display:block}
 #gateOverlay .pass-btns{margin-top:2px}
 #gateOverlay .pass-btns button{padding:12px;font-size:16px}
 #gateOverlay .gate-admin{font-size:14px;padding:9px 18px}
+#welcomeOverlay{z-index:35}
+#welcomeOverlay .big{font-size:56px}
+#welcomeOverlay h2{font-size:28px;color:#7c3aed;letter-spacing:2px}
+#welcomeOverlay .pass-btns{margin-top:16px}
 .code-box{background:rgba(0,0,0,.25);border:1px dashed rgba(255,255,255,.4);border-radius:12px;padding:10px;margin-bottom:10px;text-align:center}
 .code-box .code-label{font-size:12px;opacity:.75}
 .code-box .code-num{font-size:26px;font-weight:800;letter-spacing:4px;color:#fff;margin:4px 0}
@@ -122,7 +126,7 @@ body.admin .panel{display:block}
 </style>
 </head>
 <body>
-<h1 id="title">🎡 幸运大转盘</h1>
+<h1 id="title">🎡 cj的转盘</h1>
 <div class="sub" id="sub">点「开始」，看看运气如何</div>
 
 <div class="wheel-wrap">
@@ -208,6 +212,15 @@ body.admin .panel{display:block}
   </div>
 </div>
 
+<div class="overlay" id="welcomeOverlay">
+  <div class="modal small">
+    <div class="big">👋</div>
+    <h2>欢迎yg！</h2>
+    <div class="gate-sub">准备好就点「开始」吧</div>
+    <div class="pass-btns"><button id="welcomeOk">开始</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -274,6 +287,8 @@ const codeOverlay=document.getElementById('codeOverlay');
 const codeBig=document.getElementById('codeBig');
 const codeRefresh=document.getElementById('codeRefresh');
 const codeDone=document.getElementById('codeDone');
+const welcomeOverlay=document.getElementById('welcomeOverlay');
+const welcomeOk=document.getElementById('welcomeOk');
 const toastEl=document.getElementById('toast');
 
 // ---- option parsing ----
@@ -664,6 +679,7 @@ codeRefresh.addEventListener('click',()=>{
   toast('新抽奖码已生成');
 });
 codeDone.addEventListener('click',()=>codeOverlay.classList.remove('show'));
+welcomeOk.addEventListener('click',()=>welcomeOverlay.classList.remove('show'));
 gateConfirm.addEventListener('click',()=>{
   const v=gateInput.value.trim();
   if(!v){ gateMsg.textContent='请输入抽奖码'; return; }
@@ -677,6 +693,7 @@ gateConfirm.addEventListener('click',()=>{
     updateCodeBox();
     startRound();
     toast('✅ 已入场，抽奖码已更新');
+    welcomeOverlay.classList.add('show');
   }else{
     gateMsg.textContent='抽奖码错误';
   }
