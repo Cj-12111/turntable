@@ -86,6 +86,14 @@ body.admin .panel{display:block}
 .pass-btns #passCancel{background:#e5e7eb;color:#374151;box-shadow:none}
 .pass-btns #passConfirm{background:linear-gradient(#a78bfa,#7c3aed);color:#fff}
 .pass-msg{color:#dc2626;font-size:13px;margin-top:8px;min-height:16px}
+#gateOverlay{z-index:30}
+#passOverlay{z-index:40}
+.gate-sub{font-size:13px;color:#6b7280;margin:6px 0 0}
+.gate-admin{display:inline-block;margin-top:14px;font-size:12px;color:#8b5cf6;text-decoration:underline;cursor:pointer;background:none;border:none;padding:0}
+.code-box{background:rgba(0,0,0,.25);border:1px dashed rgba(255,255,255,.4);border-radius:12px;padding:10px;margin-bottom:10px;text-align:center}
+.code-box .code-label{font-size:12px;opacity:.75}
+.code-box .code-num{font-size:26px;font-weight:800;letter-spacing:4px;color:#fff;margin:4px 0}
+.code-box button{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;border-radius:10px;padding:6px 14px;font-size:12px;cursor:pointer;margin-top:4px}
 .toast{position:fixed;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
   background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:30px;font-size:14px;z-index:30;
   opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
@@ -110,6 +118,11 @@ body.admin .panel{display:block}
   <div class="panel-head">
     <span class="panel-title">🔐 奖品管理</span>
     <span class="count" id="count">0 项</span>
+  </div>
+  <div class="code-box">
+    <div class="code-label">当前抽奖码（给下一位玩家）</div>
+    <div class="code-num" id="codeNum">------</div>
+    <button id="codeBtn">换一个新码</button>
   </div>
   <div class="chips" id="chips"></div>
   <div class="note">提示：奖品文字里带「加一」的，抽中后该色块会移除，并次数+1 自动继续抽。</div>
@@ -147,6 +160,20 @@ body.admin .panel{display:block}
   </div>
 </div>
 
+<div class="overlay" id="gateOverlay">
+  <div class="modal small">
+    <div class="big">🎟️</div>
+    <h2>抽奖入场码</h2>
+    <div class="gate-sub">向 cj 要抽奖码才能开始</div>
+    <input id="gateInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="输入 6 位抽奖码" autocomplete="off">
+    <div class="pass-btns">
+      <button id="gateConfirm">进入</button>
+    </div>
+    <div class="pass-msg" id="gateMsg"></div>
+    <button class="gate-admin" id="gateAdmin">我是管理员</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -169,6 +196,8 @@ let roundActive=false, roundDone=false, revealAll=false;
 let spinning=false;
 let rotation=0;
 let adminUnlocked=false;
+let locked=true;
+let accessCode='';
 let unlockTaps=0, unlockTimer=null, toastTimer=null;
 
 const canvas=document.getElementById('wheel');
@@ -197,6 +226,13 @@ const passInput=document.getElementById('passInput');
 const passCancel=document.getElementById('passCancel');
 const passConfirm=document.getElementById('passConfirm');
 const passMsg=document.getElementById('passMsg');
+const gateOverlay=document.getElementById('gateOverlay');
+const gateInput=document.getElementById('gateInput');
+const gateConfirm=document.getElementById('gateConfirm');
+const gateMsg=document.getElementById('gateMsg');
+const gateAdmin=document.getElementById('gateAdmin');
+const codeNum=document.getElementById('codeNum');
+const codeBtn=document.getElementById('codeBtn');
 const toastEl=document.getElementById('toast');
 
 // ---- option parsing ----
@@ -219,6 +255,21 @@ function load(){
   return [...DEFAULTS];
 }
 function save(){ try{ localStorage.setItem('turntableOptions',JSON.stringify(baseOptions)); }catch(e){} }
+
+// ---- access code (入场抽奖码) ----
+function genCode(){
+  const a=new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return String(a[0]%1000000).padStart(6,'0');
+}
+function saveCode(){ try{ localStorage.setItem('turntableCode',accessCode); }catch(e){} }
+function updateCodeBox(){ codeNum.textContent=accessCode||'------'; }
+function showGate(){
+  locked=true;
+  gateInput.value=''; gateMsg.textContent='';
+  gateOverlay.classList.add('show');
+}
+function hideGate(){ gateOverlay.classList.remove('show'); }
 
 // ---- game lifecycle ----
 function startRound(){
@@ -275,9 +326,13 @@ function draw(){
     ctx.fillStyle=COLORS[i%COLORS.length]; ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1.6; ctx.stroke();
     if(revealAll || revealedIndex===i){
+      const mid=start+seg/2;
+      let a=(rotation+mid)%(2*Math.PI);
+      if(a<0) a+=2*Math.PI;
+      const flip=(a>Math.PI/2 && a<Math.PI*1.5);
       ctx.save();
       ctx.globalAlpha=revealAlpha;
-      ctx.rotate(start+seg/2);
+      ctx.rotate(mid+(flip?Math.PI:0));
       ctx.textAlign='right'; ctx.textBaseline='middle';
       ctx.font='700 '+fontSz(seg)+'px sans-serif';
       ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=4;
@@ -322,12 +377,41 @@ function winSound(){
     });
   }catch(e){}
 }
+function applause(){
+  if(!actx) return;
+  try{
+    const now=actx.currentTime;
+    const master=actx.createGain();
+    master.gain.value=1;
+    master.connect(actx.destination);
+    const len=Math.floor(actx.sampleRate*0.06);
+    const buf=actx.createBuffer(1,len,actx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/len*6);
+    for(let i=0;i<40;i++){
+      const t=now+Math.random()*1.6;
+      const src=actx.createBufferSource();
+      src.buffer=buf;
+      const f=actx.createBiquadFilter();
+      f.type='bandpass'; f.frequency.value=700+Math.random()*2800; f.Q.value=0.7;
+      const g=actx.createGain();
+      g.gain.value=Math.max(0.02,(0.12+Math.random()*0.4)*(1.6-(t-now))/1.6);
+      src.connect(f); f.connect(g); g.connect(master);
+      src.start(t); src.stop(t+0.09);
+    }
+    master.gain.setValueAtTime(1,now);
+    master.gain.exponentialRampToValueAtTime(0.001,now+1.9);
+  }catch(e){}
+}
 
 // ---- spin ----
-function randomIndex(){
+function randUpTo(n){
   const a=new Uint32Array(1);
   crypto.getRandomValues(a);
-  return a[0]%gameOptions.length;
+  return a[0]%n;
+}
+function randomIndex(){
+  return randUpTo(gameOptions.length);
 }
 function pointerIndexAt(r){
   const seg=2*Math.PI/gameOptions.length;
@@ -335,6 +419,7 @@ function pointerIndexAt(r){
   return Math.floor(a/seg)%gameOptions.length;
 }
 function spin(){
+  if(locked) return;
   if(spinning || gameOptions.length<1) return;
   if(roundDone){
     toast('次数已用完，本局结束');
@@ -349,7 +434,15 @@ function spin(){
   revealedIndex=-1; revealAlpha=1;
   updateStatus();
   const seg=2*Math.PI/gameOptions.length;
-  const idx=randomIndex();
+  let idx;
+  if(spinCount===1){
+    // 第一次必中「加一」，之后纯随机
+    const plus=[];
+    gameOptions.forEach((o,i)=>{ if(parseOption(o).plus) plus.push(i); });
+    idx = plus.length ? plus[randUpTo(plus.length)] : randomIndex();
+  }else{
+    idx=randomIndex();
+  }
   const theta=-Math.PI/2+idx*seg+seg/2;
   let final=-Math.PI/2-theta;
   const minRot=rotation+5*2*Math.PI;
@@ -397,6 +490,7 @@ function finishNormal(idx,opt){
   redeemNote.textContent='请凭借截图向cj兑换奖品';
   overlay.classList.add('show');
   winSound();
+  setTimeout(applause,400);
   confetti();
 }
 function revealFade(){
@@ -453,6 +547,8 @@ passConfirm.addEventListener('click',async ()=>{
     passOverlay.classList.remove('show');
     passMsg.textContent='';
     setAdmin(true);
+    hideGate();
+    locked=false;
   }else{
     passMsg.textContent='密码错误';
   }
@@ -462,10 +558,49 @@ passInput.addEventListener('keydown',e=>{ if(e.key==='Enter') passConfirm.click(
 function setAdmin(on){
   adminUnlocked=on;
   document.body.classList.toggle('admin',on);
-  if(on) render();
+  if(on){ render(); updateCodeBox(); }
 }
-lockBtn.addEventListener('click',()=>setAdmin(false));
-newGameBtn.addEventListener('click',()=>{ if(!spinning) startRound(); });
+lockBtn.addEventListener('click',()=>{
+  setAdmin(false);
+  showGate();
+});
+newGameBtn.addEventListener('click',()=>{
+  if(!spinning){
+    startRound();
+    accessCode=genCode();
+    saveCode();
+    updateCodeBox();
+  }
+});
+codeBtn.addEventListener('click',()=>{
+  accessCode=genCode();
+  saveCode();
+  updateCodeBox();
+  toast('新抽奖码已生成');
+});
+gateAdmin.addEventListener('click',()=>{
+  passInput.value=''; passMsg.textContent='';
+  passOverlay.classList.add('show');
+  setTimeout(()=>passInput.focus(),80);
+});
+gateConfirm.addEventListener('click',()=>{
+  const v=gateInput.value.trim();
+  if(!v){ gateMsg.textContent='请输入抽奖码'; return; }
+  if(v===accessCode){
+    gateMsg.textContent='';
+    gateInput.value='';
+    hideGate();
+    locked=false;
+    accessCode=genCode();
+    saveCode();
+    updateCodeBox();
+    startRound();
+    toast('✅ 已入场，抽奖码已更新');
+  }else{
+    gateMsg.textContent='抽奖码错误';
+  }
+});
+gateInput.addEventListener('keydown',e=>{ if(e.key==='Enter') gateConfirm.click(); });
 passBtn.addEventListener('click',async ()=>{
   const np=prompt('输入新的解锁密码（至少4位）:');
   if(np===null) return;
@@ -538,6 +673,9 @@ baseOptions=load();
 resize();
 render();
 startRound();
+accessCode=localStorage.getItem('turntableCode')||genCode();
+saveCode();
+showGate();
 </script>
 </body>
 </html>
