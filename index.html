@@ -23,8 +23,8 @@ body{
   touch-action:manipulation;
 }
 h1{margin:6px 0 2px;font-size:22px;letter-spacing:1px;text-shadow:0 2px 8px rgba(0,0,0,.35)}
-.sub{font-size:13px;opacity:.75;margin-bottom:6px}
-.wheel-wrap{position:relative;width:min(82vw,300px);aspect-ratio:1/1;margin:12px auto 10px}
+.sub{font-size:13px;opacity:.75;margin-bottom:4px}
+.wheel-wrap{position:relative;width:min(82vw,300px);aspect-ratio:1/1;margin:12px auto 6px}
 #wheel{width:100%;height:100%;display:block;filter:drop-shadow(0 12px 24px rgba(0,0,0,.45))}
 .needle{position:absolute;top:-4%;left:50%;transform:translateX(-50%);z-index:5;
   width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:24px solid #ef4444;
@@ -38,19 +38,23 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:1px;text-shadow:0 2px 8px rgba
   transition:transform .1s}
 .spin-btn:active{transform:translate(-50%,-50%) scale(.94)}
 .spin-btn.disabled{opacity:.5}
-.hint{font-size:12px;opacity:.75;margin:2px 0 10px;display:none}
+.status{font-size:13px;opacity:.85;margin:2px 0 10px;min-height:18px;text-align:center}
 .panel{width:min(94vw,420px);background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);
-  border-radius:18px;padding:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  border-radius:18px;padding:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:none}
+body.admin .panel{display:block}
 .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .panel-title{font-size:14px;font-weight:700}
 .count{font-size:12px;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:20px}
-.chips{display:flex;flex-wrap:wrap;gap:8px;max-height:120px;overflow-y:auto;margin-bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;max-height:130px;overflow-y:auto;margin-bottom:10px}
 .chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);
   border-radius:20px;padding:6px 6px 6px 12px;font-size:13px;max-width:100%}
-.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}
+.chip.plus{outline:1px dashed rgba(255,255,255,.5)}
 .chip button{border:none;background:rgba(0,0,0,.25);color:#fff;width:18px;height:18px;border-radius:50%;
   font-size:12px;line-height:1;cursor:pointer;flex:none}
 .chip button:active{background:rgba(0,0,0,.45)}
+.note{font-size:11px;opacity:.6;margin-bottom:8px;line-height:1.5}
 .add-row{display:flex;gap:8px}
 .add-row input{flex:1;min-width:0;border-radius:12px;border:1px solid rgba(255,255,255,.25);
   background:rgba(0,0,0,.25);color:#fff;padding:10px 12px;font-size:14px;outline:none}
@@ -67,41 +71,56 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:1px;text-shadow:0 2px 8px rgba
 .overlay.show{display:flex}
 .modal{background:linear-gradient(#fff,#f3f0ff);color:#3b0764;border-radius:22px;padding:30px 26px;width:min(84vw,320px);
   text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+.modal.small{width:min(84vw,300px);padding:22px 18px}
 .modal .big{font-size:44px;margin-bottom:8px}
 .modal h2{margin:0 0 4px;font-size:18px}
-.modal .result{font-size:22px;font-weight:800;color:#7c3aed;word-break:break-all;margin-bottom:18px}
+.modal .result{font-size:22px;font-weight:800;color:#7c3aed;word-break:break-all;margin-bottom:16px}
 .modal button{border:none;background:linear-gradient(#a78bfa,#7c3aed);color:#fff;font-size:15px;font-weight:700;
   padding:11px 34px;border-radius:30px;cursor:pointer;box-shadow:0 6px 16px rgba(124,58,237,.4)}
 .modal button:active{filter:brightness(.9)}
+.redeem{font-size:13px;color:#6b7280;margin-top:10px}
+.modal input[type=password]{width:100%;border:1px solid rgba(124,58,237,.35);border-radius:10px;padding:10px 12px;
+  font-size:16px;margin:12px 0;outline:none;text-align:center;color:#3b0764}
+.pass-btns{display:flex;gap:10px}
+.pass-btns button{flex:1;border:none;border-radius:12px;padding:10px;font-size:14px;font-weight:700;cursor:pointer}
+.pass-btns #passCancel{background:#e5e7eb;color:#374151;box-shadow:none}
+.pass-btns #passConfirm{background:linear-gradient(#a78bfa,#7c3aed);color:#fff}
+.pass-msg{color:#dc2626;font-size:13px;margin-top:8px;min-height:16px}
+.toast{position:fixed;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.78);color:#fff;padding:10px 18px;border-radius:30px;font-size:14px;z-index:30;
+  opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
 @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
 .confetti{position:fixed;top:-14px;width:9px;height:14px;z-index:19;pointer-events:none;border-radius:2px}
 @keyframes fall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(720deg);opacity:.6}}
 </style>
 </head>
 <body>
-<h1>🎡 幸运大转盘</h1>
-<div class="sub">点中间的「开始」，看看今天抽到什么</div>
+<h1 id="title">🎡 幸运大转盘</h1>
+<div class="sub" id="sub">点「开始」，看看运气如何</div>
 
 <div class="wheel-wrap">
   <canvas id="wheel"></canvas>
   <div class="needle"></div>
   <button class="spin-btn" id="spinBtn">开始</button>
 </div>
-<div class="hint" id="hint">至少需要 2 个选项</div>
+<div class="status" id="status"></div>
 
-<div class="panel">
+<div class="panel" id="panel">
   <div class="panel-head">
-    <span class="panel-title">✏️ 抽奖选项</span>
-    <span class="count" id="count">8 项</span>
+    <span class="panel-title">🔐 奖品管理</span>
+    <span class="count" id="count">0 项</span>
   </div>
   <div class="chips" id="chips"></div>
+  <div class="note">提示：奖品文字里带「加一」的，抽中后该色块会移除，并次数+1 自动继续抽。</div>
   <div class="add-row">
-    <input id="newOpt" type="text" maxlength="20" placeholder="输入新选项，回车添加…" autocomplete="off">
+    <input id="newOpt" type="text" maxlength="30" placeholder="输入奖品，回车添加…" autocomplete="off">
     <button id="addBtn">添加</button>
   </div>
   <div class="tools">
     <button id="resetBtn">恢复默认</button>
-    <button id="clearBtn">清空</button>
+    <button id="passBtn">改密码</button>
+    <button id="lockBtn">锁定 🔒</button>
   </div>
 </div>
 
@@ -111,47 +130,117 @@ h1{margin:6px 0 2px;font-size:22px;letter-spacing:1px;text-shadow:0 2px 8px rgba
     <h2>恭喜抽中</h2>
     <div class="result" id="resultText"></div>
     <button id="okBtn">太棒了</button>
+    <div class="redeem" id="redeemNote"></div>
   </div>
 </div>
 
+<div class="overlay" id="passOverlay">
+  <div class="modal small">
+    <h2>🔐 管理员验证</h2>
+    <input id="passInput" type="password" maxlength="20" placeholder="输入解锁密码">
+    <div class="pass-btns">
+      <button id="passCancel">取消</button>
+      <button id="passConfirm">确认</button>
+    </div>
+    <div class="pass-msg" id="passMsg"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
 const COLORS=['#f43f5e','#f97316','#f59e0b','#10b981','#06b6d4','#3b82f6','#8b5cf6','#d946ef','#ef4444','#84cc16','#14b8a6','#6366f1','#ec4899','#facc15','#22c55e','#0ea5e9','#a855f7','#f87171','#34d399','#60a5fa'];
-const DEFAULTS=['咖啡一杯','免加班券','彩票一张','零食大礼包','谢谢参与','锦鲤附体','奶茶一杯','大扫除一次'];
+const DEFAULTS=[
+  '艾尔登法环本体',
+  '一整个榴莲！',
+  'dark souls重制版',
+  '一张cj的照片（抽到这个次数加一）',
+  '黑暗之魂3',
+  '一只可爱的奶龙（抽到这个次数加一）'
+];
+const DEFAULT_PASS='5278';
 
-let options=[];
-let rotation=0;
+let baseOptions=[];
+let gameOptions=[];
+let spinsLeft=1, spinCount=0;
+let revealedIndex=-1, revealAlpha=1;
+let roundActive=false;
 let spinning=false;
+let rotation=0;
+let adminUnlocked=false;
+let unlockTaps=0, unlockTimer=null, toastTimer=null;
 
 const canvas=document.getElementById('wheel');
 const ctx=canvas.getContext('2d');
 let W=0,H=0,R=0;
 
+const titleEl=document.getElementById('title');
+const subEl=document.getElementById('sub');
 const spinBtn=document.getElementById('spinBtn');
+const statusEl=document.getElementById('status');
+const panel=document.getElementById('panel');
 const chipsEl=document.getElementById('chips');
 const countEl=document.getElementById('count');
-const hint=document.getElementById('hint');
 const newOpt=document.getElementById('newOpt');
 const addBtn=document.getElementById('addBtn');
 const resetBtn=document.getElementById('resetBtn');
-const clearBtn=document.getElementById('clearBtn');
+const passBtn=document.getElementById('passBtn');
+const lockBtn=document.getElementById('lockBtn');
 const overlay=document.getElementById('overlay');
 const resultText=document.getElementById('resultText');
+const redeemNote=document.getElementById('redeemNote');
 const okBtn=document.getElementById('okBtn');
+const passOverlay=document.getElementById('passOverlay');
+const passInput=document.getElementById('passInput');
+const passCancel=document.getElementById('passCancel');
+const passConfirm=document.getElementById('passConfirm');
+const passMsg=document.getElementById('passMsg');
+const toastEl=document.getElementById('toast');
 
+// ---- option parsing ----
+function parseOption(t){
+  const plus=/加一|加1|＋1|\+1|加一次|再来一次/.test(t);
+  const label=t.replace(/\s*[（(][^）)]*[）)]\s*$/,'').trim() || t.trim();
+  return {label, plus};
+}
+
+// ---- storage ----
 function load(){
   try{
     const s=localStorage.getItem('turntableOptions');
     if(s){
       const a=JSON.parse(s);
-      if(Array.isArray(a)&&a.length>=2&&a.every(x=>typeof x==='string'&&x.trim().length>0))
+      if(Array.isArray(a)&&a.length>=1&&a.every(x=>typeof x==='string'&&x.trim().length>0))
         return a.map(x=>x.trim());
     }
   }catch(e){}
   return [...DEFAULTS];
 }
-function save(){ try{ localStorage.setItem('turntableOptions',JSON.stringify(options)); }catch(e){} }
-options=load();
+function save(){ try{ localStorage.setItem('turntableOptions',JSON.stringify(baseOptions)); }catch(e){} }
 
+// ---- game lifecycle ----
+function startRound(){
+  gameOptions=[...baseOptions];
+  spinsLeft=1; spinCount=0; revealedIndex=-1; revealAlpha=1;
+  roundActive=true;
+  updateStatus(); draw();
+}
+function endRound(){
+  roundActive=false;
+  gameOptions=[...baseOptions];
+  spinsLeft=1; spinCount=0; revealedIndex=-1; revealAlpha=1;
+  updateStatus(); draw();
+}
+function updateStatus(){
+  if(!roundActive){ statusEl.textContent=''; return; }
+  statusEl.textContent='第 '+spinCount+' 次 · 剩余 '+spinsLeft+' 次';
+}
+function afterEdit(){
+  save(); render();
+  if(!spinning) endRound();
+}
+
+// ---- canvas ----
 function resize(){
   const rect=canvas.getBoundingClientRect();
   const dpr=Math.min(window.devicePixelRatio||1,3);
@@ -167,7 +256,7 @@ function fontSz(seg){ return Math.max(11,Math.min(20,(seg*R)/2.6)); }
 function shorten(s){ return s.length>7 ? s.slice(0,7)+'…' : s; }
 
 function draw(){
-  const n=options.length;
+  const n=gameOptions.length;
   R=Math.min(W,H)/2-2;
   const cx=W/2, cy=H/2;
   ctx.clearRect(0,0,W,H);
@@ -182,13 +271,16 @@ function draw(){
     ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,start,end); ctx.closePath();
     ctx.fillStyle=COLORS[i%COLORS.length]; ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1.6; ctx.stroke();
-    ctx.save();
-    ctx.rotate(start+seg/2);
-    ctx.textAlign='right'; ctx.textBaseline='middle';
-    ctx.font='700 '+fontSz(seg)+'px sans-serif';
-    ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=3;
-    ctx.fillText(shorten(options[i]),R-13,0);
-    ctx.restore();
+    if(revealedIndex===i){
+      ctx.save();
+      ctx.globalAlpha=revealAlpha;
+      ctx.rotate(start+seg/2);
+      ctx.textAlign='right'; ctx.textBaseline='middle';
+      ctx.font='700 '+fontSz(seg)+'px sans-serif';
+      ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=4;
+      ctx.fillText(shorten(parseOption(gameOptions[i]).label),R-13,0);
+      ctx.restore();
+    }
   }
   ctx.restore();
   ctx.beginPath(); ctx.arc(cx,cy,R-1,0,2*Math.PI);
@@ -232,17 +324,23 @@ function winSound(){
 function randomIndex(){
   const a=new Uint32Array(1);
   crypto.getRandomValues(a);
-  return a[0]%options.length;
+  return a[0]%gameOptions.length;
 }
 function pointerIndexAt(r){
-  const seg=2*Math.PI/options.length;
+  const seg=2*Math.PI/gameOptions.length;
   let a=(-r)%(2*Math.PI); if(a<0) a+=2*Math.PI;
-  return Math.floor(a/seg)%options.length;
+  return Math.floor(a/seg)%gameOptions.length;
 }
 function spin(){
-  if(spinning || options.length<2) return;
+  if(spinning || gameOptions.length<1) return;
+  if(!roundActive) startRound();
+  if(gameOptions.length===1){ resolveLanding(0,true); return; }
   spinning=true;
-  const seg=2*Math.PI/options.length;
+  spinCount++;
+  spinsLeft=Math.max(0,spinsLeft-1);
+  revealedIndex=-1; revealAlpha=1;
+  updateStatus();
+  const seg=2*Math.PI/gameOptions.length;
   const idx=randomIndex();
   const theta=-Math.PI/2+idx*seg+seg/2;
   let final=-Math.PI/2-theta;
@@ -263,23 +361,124 @@ function animate(from,to,idx){
     if(cur!==last){ last=cur; tick(); }
     draw();
     if(t<1){ requestAnimationFrame(frame); }
-    else{ spinning=false; finish(idx); }
+    else{ spinning=false; resolveLanding(idx); }
   }
   requestAnimationFrame(frame);
 }
-function finish(idx){
-  resultText.textContent=options[idx];
+function resolveLanding(idx, forcedNormal){
+  if(idx>=gameOptions.length){ idx=gameOptions.length-1; }
+  const opt=parseOption(gameOptions[idx]);
+  if(!forcedNormal && opt.plus && gameOptions.length>1){
+    finishPlusOne(idx,opt);
+  }else{
+    finishNormal(idx,opt);
+  }
+}
+function finishPlusOne(idx,opt){
+  gameOptions.splice(idx,1);
+  spinsLeft++;
+  revealedIndex=-1; revealAlpha=1;
+  updateStatus(); draw();
+  toast('🎁 抽到「'+opt.label+'」，次数+1，继续抽！');
+  setTimeout(()=>{ if(!spinning) spin(); },1700);
+}
+function finishNormal(idx,opt){
+  revealedIndex=idx; revealAlpha=0;
+  revealFade();
+  resultText.textContent=opt.label;
+  redeemNote.textContent='请凭借截图向cj兑换奖品';
   overlay.classList.add('show');
   winSound();
   confetti();
 }
+function revealFade(){
+  const t0=performance.now();
+  function fr(now){
+    const t=Math.min(1,(now-t0)/400);
+    revealAlpha=1-Math.pow(1-t,3);
+    draw();
+    if(t<1){ requestAnimationFrame(fr); }
+  }
+  requestAnimationFrame(fr);
+}
 
-// ---- UI ----
+// ---- toast ----
+function toast(msg){
+  toastEl.textContent=msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toastEl.classList.remove('show'),1500);
+}
+
+// ---- admin / password ----
+async function hashPass(s){
+  const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function checkPass(p){
+  try{
+    const stored=localStorage.getItem('turntablePassHash');
+    if(stored){
+      if(stored.startsWith('plain:')) return p===stored.slice(6);
+      return (await hashPass(p))===stored;
+    }
+    return (await hashPass(p))===await hashPass(DEFAULT_PASS);
+  }catch(e){
+    return p===DEFAULT_PASS;
+  }
+}
+titleEl.addEventListener('click',()=>{
+  unlockTaps++;
+  clearTimeout(unlockTimer);
+  unlockTimer=setTimeout(()=>{ unlockTaps=0; },3000);
+  if(unlockTaps>=5){
+    unlockTaps=0;
+    passInput.value=''; passMsg.textContent='';
+    passOverlay.classList.add('show');
+    setTimeout(()=>passInput.focus(),80);
+  }
+});
+passConfirm.addEventListener('click',async ()=>{
+  const p=passInput.value.trim();
+  if(!p){ passMsg.textContent='请输入密码'; return; }
+  if(await checkPass(p)){
+    passOverlay.classList.remove('show');
+    passMsg.textContent='';
+    setAdmin(true);
+  }else{
+    passMsg.textContent='密码错误';
+  }
+});
+passCancel.addEventListener('click',()=>passOverlay.classList.remove('show'));
+passInput.addEventListener('keydown',e=>{ if(e.key==='Enter') passConfirm.click(); });
+function setAdmin(on){
+  adminUnlocked=on;
+  document.body.classList.toggle('admin',on);
+  if(on) render();
+}
+lockBtn.addEventListener('click',()=>setAdmin(false));
+passBtn.addEventListener('click',async ()=>{
+  const np=prompt('输入新的解锁密码（至少4位）:');
+  if(np===null) return;
+  const npv=np.trim();
+  if(npv.length<4){ alert('密码至少需要4位'); return; }
+  const np2=prompt('再输入一次确认:');
+  if(np2===null) return;
+  if(np2.trim()!==npv){ alert('两次输入不一致'); return; }
+  try{
+    localStorage.setItem('turntablePassHash',await hashPass(npv));
+  }catch(e){
+    localStorage.setItem('turntablePassHash','plain:'+npv);
+  }
+  alert('✅ 密码已修改');
+});
+
+// ---- edit options ----
 function render(){
-  countEl.textContent=options.length+' 项';
+  countEl.textContent=baseOptions.length+' 项';
   chipsEl.innerHTML='';
-  options.forEach((o,i)=>{
-    const c=document.createElement('div'); c.className='chip';
+  baseOptions.forEach((o,i)=>{
+    const c=document.createElement('div'); c.className='chip'+(parseOption(o).plus?' plus':'');
     const s=document.createElement('span'); s.textContent=o;
     const b=document.createElement('button'); b.textContent='✕';
     b.setAttribute('aria-label','删除 '+o);
@@ -287,25 +486,26 @@ function render(){
     c.appendChild(s); c.appendChild(b);
     chipsEl.appendChild(c);
   });
-  const can=options.length>=2;
-  spinBtn.classList.toggle('disabled',!can);
-  hint.style.display=can?'none':'block';
   draw();
 }
-function removeOpt(i){ options.splice(i,1); save(); render(); }
+function removeOpt(i){ baseOptions.splice(i,1); afterEdit(); }
 function addOpt(){
   const v=newOpt.value.trim();
   if(!v) return;
-  options.push(v);
-  newOpt.value=''; save(); render(); newOpt.focus();
+  baseOptions.push(v);
+  newOpt.value='';
+  afterEdit();
+  newOpt.focus();
 }
-
-spinBtn.addEventListener('click',()=>{ ensureAudio(); spin(); });
 addBtn.addEventListener('click',addOpt);
 newOpt.addEventListener('keydown',e=>{ if(e.key==='Enter') addOpt(); });
-resetBtn.addEventListener('click',()=>{ options=[...DEFAULTS]; save(); render(); });
-clearBtn.addEventListener('click',()=>{ options=[]; save(); render(); });
-okBtn.addEventListener('click',()=>overlay.classList.remove('show'));
+resetBtn.addEventListener('click',()=>{ baseOptions=[...DEFAULTS]; afterEdit(); });
+
+// ---- result modal ----
+okBtn.addEventListener('click',()=>{
+  overlay.classList.remove('show');
+  endRound();
+});
 
 // ---- confetti ----
 const CONFETTI_COLORS=['#f43f5e','#f97316','#f59e0b','#10b981','#06b6d4','#8b5cf6','#d946ef'];
@@ -322,6 +522,11 @@ function confetti(){
   }
 }
 
+spinBtn.addEventListener('click',()=>{ ensureAudio(); spin(); });
+
+// ---- init ----
+baseOptions=load();
+gameOptions=[...baseOptions];
 resize();
 render();
 </script>
